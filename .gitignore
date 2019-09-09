@@ -1,3 +1,6 @@
+# Swap files from vim
+*.swp
+
 # History files
 .Rhistory
 .Rapp.history
