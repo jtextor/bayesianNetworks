@@ -70,3 +70,90 @@ predict.optimal_bayes <- function( object, newdata ){
 	r
 }
 
+#' Performs a Conditional Independence Test for Mixed Data.
+#'
+#' This tests whether X and Y are conditionally independent given Z.
+#' @param x character. Name of column containing X variable.
+#' @param y character. Name of column containing Y variables.
+#' @param z character vector. Names of colums containing the Z variables, if any.
+#' 
+#' @return a list with components "effect", "p.value", and "statistic".
+#' @export
+#' @importFrom ranger ranger
+ci.test <- function( x, y, z=NULL, data ) {
+	require(ranger)
+
+	if( !is.data.frame(data) ){
+		stop("Please supply your data in a data frame!")
+	}
+	
+	n <- nrow(data)
+
+	if( is.ordered( data[,x] ) ){
+		data[,x] <- as.integer(data[,x])
+		tx <- matrix( data[,x],ncol=1 )
+	} else if( is.numeric( data[,x] ) ){
+		data[,x] <- rank( data[,x] )
+		tx <- matrix( data[,x],ncol=1 )
+	} else if( is.factor( data[,x] ) ){ 
+		tx <- table( seq_len(n), data[,x] )
+	} else {
+		stop( "unsupported data type: x ")
+	}
+
+	if( is.ordered( data[,y] ) ){
+		data[,y] <- as.integer(data[,y])
+		ty <- matrix( data[,y], ncol=1 )
+	} else if( is.numeric( data[,y] ) ){
+		data[,y] <- rank( data[,y] )
+		ty <- matrix( data[,y], ncol=1 )
+	} else if( is.factor( data[,y] ) ){ 
+		ty <- table( seq_len(n), data[,y] )
+	} else {
+		stop( "unsupported data type: y ")
+	}
+
+	# residualize
+	if( is.null(z) ){
+		tx <- sweep( tx, 2, colMeans(tx) )
+		ty <- sweep( ty, 2, colMeans(ty) )
+	} else {
+		forest.x <- ranger::ranger( x=data[,z,drop=FALSE], y=data[,x],
+			probability=ncol(tx)>1 )
+		tx <- tx - predict( forest.x, data=data )$predictions
+
+		forest.y <- ranger::ranger( x=data[,z,drop=FALSE], y=data[,y],
+			probability=ncol(ty)>1 )
+		ty <- ty - predict( forest.y, data=data )$predictions
+	}
+
+
+	if( is.factor(data[,x]) ){
+		tx <- tx[,-ncol(tx),drop=FALSE]
+	}
+	if( is.factor(data[,y]) ){
+		ty <- ty[,-ncol(ty),drop=FALSE]
+	}
+
+	k <- ncol(tx)
+	r <- ncol(ty)	
+
+	m <- 1
+	R <- matrix( 0, nrow=n, ncol=(k)*(r) )
+
+	# this takes long and can probably be done better
+	for( i in 1:(k) ){
+		for( j in 1:(r) ){
+			R[,m] <- (tx[,i]*ty[,j]) / sqrt(mean(tx[,i]^2)) / sqrt(mean(ty[,j]^2))
+			m <- m+1
+		}
+	}
+
+	p <- ncol(R)
+
+	x2c <- (n-p) / p / (n-1) * n * t(colMeans(R)) %*% MASS::ginv( cov(R) ) %*% colMeans(R)
+	list( statistic=c(x2c), effect=c(sqrt(sum(colMeans(R)^2) / min(k,r))), 
+		p.value=pchisq(c(x2c), k*r,lower.tail=FALSE) )
+}
+
+

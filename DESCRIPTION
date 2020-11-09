@@ -1,11 +1,13 @@
 Package: bayesianNetworks
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: Course Materials for the Bayesian Networks Course
+Version: 0.0.0.10
+Author: Johannes Textor
+Maintainer: Johannes Textor <johannes.textor@gmx.de>
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Johannes",
+           family = "Textor",
            role = c("aut", "cre"),
-           email = "first.last@example.com")
+           email = "johannes.textor@radboudumc.nl")
 Description: What the package does (one paragraph).
 License: What license it uses
 Encoding: UTF-8
