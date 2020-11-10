@@ -93,7 +93,11 @@ ci.test <- function( x, y, z=NULL, data ) {
 	if( !is.data.frame(data) ){
 		stop("Please supply your data in a data frame!")
 	}
-	
+
+	if( length(z) == 0 ){
+		z <- NULL
+	}	
+
 	n <- nrow(data)
 
 	if( is.ordered( data[,x] ) ){
