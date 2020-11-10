@@ -78,6 +78,13 @@ predict.optimal_bayes <- function( object, newdata ){
 #' @param z character vector. Names of colums containing the Z variables, if any.
 #' 
 #' @return a list with components "effect", "p.value", and "statistic".
+#' @examples
+#' N <- 200
+#' z <- rbinom( N, 2, .5 )
+#' x <- rbinom( N, 1, .2+z*.3 )
+#' y <- rbinom( N, 1, .8-z*.3 )
+#' d <- data.frame(x,y,z)
+#' ci.test( "x", "y", data=d )
 #' @export
 #' @importFrom ranger ranger
 ci.test <- function( x, y, z=NULL, data ) {
@@ -142,18 +149,23 @@ ci.test <- function( x, y, z=NULL, data ) {
 	R <- matrix( 0, nrow=n, ncol=(k)*(r) )
 
 	# this takes long and can probably be done better
+	keep.col <- rep( TRUE, ncol(R) )
 	for( i in 1:(k) ){
 		for( j in 1:(r) ){
+			keep.col[m] <- (k==1 || i<k) && (r==1 || j<r)
 			R[,m] <- (tx[,i]*ty[,j]) / sqrt(mean(tx[,i]^2)) / sqrt(mean(ty[,j]^2))
 			m <- m+1
 		}
 	}
 
-	p <- ncol(R)
+	cm <- colMeans(R)
+	effect <- abs(cm)[which.max( cm^2 )]
 
+	R <- R[,keep.col,drop=FALSE]
+	p <- ncol(R)
 	x2c <- (n-p) / p / (n-1) * n * t(colMeans(R)) %*% MASS::ginv( cov(R) ) %*% colMeans(R)
-	list( statistic=c(x2c), effect=c(sqrt(sum(colMeans(R)^2) / min(k,r))), 
-		p.value=pchisq(c(x2c), k*r,lower.tail=FALSE) )
+	list( statistic=c(x2c), effect=effect, parameter=max(k-1,1)*max(r-1,1),
+		p.value=pchisq(c(x2c), max(k-1,1)*max(r-1,1),lower.tail=FALSE) )
 }
 
 
